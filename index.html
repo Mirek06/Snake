@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+<style>
+    #menu {
+        width: 495px;
+        height: 495px;
+        border: 2px solid blue;
+        display: block;
+    }
+    .nadpis {
+        font-family: arial;
+        font-size: 50px;
+        color: red;
+        text-align: center;
+    }
+    .text {
+        font-family: arial;
+        font-size: 20px;
+        text-align: justify;
+        padding: 20px;
+    }
+    .container {
+        text-align: center;
+    }
+    
+    .container .button {
+        color:black;
+        background-color:red;
+        font-size: 30px;
+        font-family: arial;
+        padding: 16px 30px;
+        border: none;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+    .container .button:hover {
+        background-color: black;
+        color: white;
+        border: none;
+    }
+
+</style>
+<div id="menu">
+    <h1 class="nadpis">Vítej ve hře Mirkův Had</h1>
+    <p class="text">Had se ovládá šipkami. Cílem je sníst všechny překážky, které se takto promění v tvůj ocas. Nesmíš narazit do ohraničení a do svého ocasu, nicméně se můžes obrátit v opačný směr.</p>
+    <div class="container">
+    <button class="button">Nová hra</button>
+    </div>   
+</div>
+
+<script>
+    let gameMenu = document.getElementById("menu")
+    let gameButton = document.querySelector(".button")
+    let textProhra = document.querySelector(".text")
+    let nadpisProhra = document.querySelector(".nadpis")
+    gameButton.addEventListener("click", startGame)
+    function startGame() {
+    gameMenu.style.display = "none"
+    runGame(positions, CanvasDisplay)
+    }
+  
+    class Vec {
+        constructor(x, y) {
+            this.x = x
+            this.y = y
+        }
+        plus(other) {
+            return new Vec(this.x + other.x, this.y + other.y)
+        }
+        multiply(other) {
+            return new Vec(this.x * other.x, this.y * other.y)
+        }
+        times(factor) {
+            return new Vec(this.x * factor, this.y * factor)
+        }
+    }
+
+    let startPositions = {snake: [25, 225], obstacles:[[125, 125], [225, 225], [425, 425], [75, 425], [375, 125], [275, 325]], gameSpeed: 200, gameSize: 500}
+    let positions = [{snake: [25, 225], obstacles: [[125, 125], [225, 225], [425, 425], [75, 425], [375, 125], [275, 325]], gameSpeed: 400, gameSize: 500},
+                    {snake: [25, 225], obstacles: [[125, 125], [225, 225], [425, 425], [75, 425], [375, 125], [325, 275], [275, 375]], gameSpeed: 500, gameSize: 500},
+                    {snake: [25, 225], obstacles: [[125, 125], [225, 225], [425, 425], [75, 425], [375, 125], [325, 275], [275, 375], [225, 25], [475, 225], [225, 475], [125, 325]], gameSpeed: 600, gameSize: 500},
+                    {snake: [25, 225], obstacles: [[125, 125], [225, 225], [425, 425], [75, 425], [375, 125], [325, 275], [275, 375], [225, 25], [475, 225], [225, 475], [125, 325], [25, 25], [25, 475], [475, 475], [25, 475]], gameSpeed: 700, gameSize: 500}
+    ]
+
+    function makeGridXY(size) {
+        let gridxy = []
+        for (i = 0; i < size; i += size/10) {
+            gridxy.push([i, size/10 + i])
+        }
+        return gridxy
+    }
+
+    class Level {
+        constructor(startPositions) {
+            this.obstacles = []
+            for(let obstacle of startPositions.obstacles) {
+               this.obstacles.push(Obstacle.create(new Vec (obstacle[0], obstacle[1])))
+            }
+            let dirSnake = new Vec(0, 0) 
+            this.snake = Snake.create(new Vec (startPositions.snake[0], startPositions.snake[1]), dirSnake, startPositions.gameSpeed)
+            
+            this.width = startPositions.gameSize
+            this.height = startPositions.gameSize
+            this.snakeBody = []
+            }
+    }
+    function overlap(actor1, actor2) {
+    return actor1.pos.x + actor1.size > actor2.pos.x && actor1.pos.x < actor2.pos.x + actor2.size && actor1.pos.y + actor1.size > actor2.pos.y && actor1.pos.y < actor2.pos.y + actor2.size
+    }
+     
+    let refX = [25, 225]
+    let refY = [25, 225]
+
+    class Snake {
+        constructor(pos, dir, gameSpeed) {
+            this.pos = pos
+            this.dir = dir
+            this.gameSpeed = gameSpeed
+            this.gridXY = makeGridXY(500)
+            
+        }
+        static create(pos, dir, gameSpeed) {
+           return new Snake(pos, dir, gameSpeed)
+        }
+        size = 50
+        
+        update(time, keys) {
+            let gameSpeed = this.gameSpeed
+            let pos = this.pos
+            let dir = this.dir
+            for (let [q,u] of this.gridXY){
+                if (q <= pos.x && u >= pos.x ) {
+                    refX = [q,u]
+                }
+                if (q <= pos.y && u >= pos.y ) {
+                    refY = [q,u]
+                }  
+            }
+            if (keys.ArrowRight && (pos.y == (refY[0]+refY[1])/2)) {
+                dir = new Vec(1, 0)
+                }
+            if (keys.ArrowLeft && (pos.y == (refY[0]+refY[1])/2)) {
+                dir = new Vec(-1, 0)
+            }
+            if (keys.ArrowDown && (pos.x == (refX[0]+refX[1])/2)) {
+                dir = new Vec(0, 1)
+            }
+            if (keys.ArrowUp && (pos.x == (refX[0]+refX[1])/2)) {
+                dir = new Vec(0, -1)
+            }
+
+            if (keys.ArrowUp && Math.abs(pos.x - (refX[0]+refX[1])/2) < 5) {
+                    dir = new Vec(0, -1)
+                    pos.x = (refX[0]+refX[1])/2
+           }
+           if (keys.ArrowDown && Math.abs(pos.x - (refX[0]+refX[1])/2) < 5) {
+                    dir = new Vec(0, 1)
+                    pos.x = (refX[0]+refX[1])/2
+           }
+           if (keys.ArrowRight && Math.abs(pos.y - (refY[0]+refY[1])/2) < 5) {
+                    dir = new Vec(1, 0)
+                    pos.y = (refY[0]+refY[1])/2
+           }
+           if (keys.ArrowLeft && Math.abs(pos.y - (refY[0]+refY[1])/2) < 5) {
+                    dir = new Vec(-1, 0)
+                    pos.y = (refY[0]+refY[1])/2
+           }
+          
+            let movedXY = pos.plus(dir.times(time * this.gameSpeed))
+            pos = movedXY
+            return new Snake(pos, dir, gameSpeed)    
+    }
+    }
+    class SnakeBody{
+        constructor(pos, dir, gameSpeed, order) {
+            this.pos = pos
+            this.dir = dir
+            this.gameSpeed = gameSpeed
+            this.order = order
+            }
+        size = 50
+
+        static create(pos, dir, gameSpeed) {
+            return new SnakeBody(pos, dir, gameSpeed, order)
+        }
+        update(time) {
+            let gameSpeed = this.gameSpeed
+            let pos = this.pos
+            let dir = this.dir
+            let order = this.order          
+            let movedXY = pos.plus(dir.times(time * gameSpeed))
+            pos = movedXY
+            return new SnakeBody(pos, dir, gameSpeed, order) 
+        }
+    }
+    let counterBody = 0
+
+    class Obstacle {
+        constructor(pos) {
+            this.pos = pos
+            
+        }
+        static create(pos) {
+            return new Obstacle(pos)
+        }
+        size = 50
+
+        collide(state) {
+            let newBodys = state.snakeBody
+            newBodys.push(new SnakeBody(this.pos, new Vec(0, 0), state.snake.gameSpeed, counterBody))
+            counterBody += 1
+            let filtered = state.obstacles.filter(a =>a != this)
+            if (filtered.length == 0) {
+                state.snake.gameSpeed = 0
+                newBodys = []
+                state.snakeBody = []
+                counterBody = 0
+                snakePlan = []
+                snakePlan.push(new Vec(25, 225))
+                state.snake.pos = new Vec(25, 225)
+                state.snake.dir = new Vec(0, 0)
+                filtered = []
+                refX = [25, 225]
+                refY = [25, 225]
+                return new State(state.level, state.snake, filtered, newBodys, "won")
+            }
+            return new State(state.level, state.snake, filtered, newBodys, state.status)
+        }
+        
+        update(time) {
+            let pos = this.pos
+            return new Obstacle(pos)
+        }
+    }
+    let snakePlan = []
+    snakePlan.push(new Vec(25, 225))
+    class State {
+        constructor(level, snake, obstacles, snakeBody, status) {
+            this.level = level
+            this.snake = snake
+            this.obstacles = obstacles
+            this.snakeBody = snakeBody
+            this.status = status
+        }
+        static start(level) {
+            return new State (level, level.snake, level.obstacles, level.snakeBody, "playing")
+        }
+        update(time, keys) {
+            let newSnake = this.snake.update(time, keys)
+            let newObs = this.obstacles.map(obs => obs.update(time))
+            let newSnakeBody = this.snakeBody.map(snk => snk.update(time))
+            let newState = new State(this.level, newSnake, newObs, newSnakeBody, this.status)
+   
+
+            for (let obs of newObs) {
+                if (overlap(obs, newSnake)) {
+                    return obs.collide(newState)
+                }
+            }
+            if (((refX[0]+refX[1])/2 != snakePlan[snakePlan.length-1].x) || ((refY[0]+refY[1])/2 != snakePlan[snakePlan.length-1].y))  {
+            snakePlan.push(new Vec((refX[0]+refX[1])/2, (refY[0]+refY[1])/2))
+            }
+            
+            if (counterBody >= 1) {  
+                  
+                if (Math.abs(newSnake.pos.x - newSnakeBody[0].pos.x) > 51 && newSnake.pos.y == newSnakeBody[0].pos.y) {
+                    newSnake.pos = snakePlan[snakePlan.length-1]
+                    newSnakeBody[0].pos = snakePlan[snakePlan.length-2]
+                    newSnakeBody[0].dir = new Vec((snakePlan[snakePlan.length-1].x - snakePlan[snakePlan.length-2].x)/50, (snakePlan[snakePlan.length-1].y - snakePlan[snakePlan.length-2].y)/50)
+                }  
+
+                if (Math.abs(newSnake.pos.x - newSnakeBody[0].pos.x) > 51 && (newSnake.pos.y != newSnakeBody[0].pos.y)) {
+                    newSnake.pos = snakePlan[snakePlan.length-1]
+                    newSnakeBody[0].pos = snakePlan[snakePlan.length-2]
+                    newSnakeBody[0].dir = new Vec((snakePlan[snakePlan.length-1].x - snakePlan[snakePlan.length-2].x)/50, (snakePlan[snakePlan.length-1].y - snakePlan[snakePlan.length-2].y)/50)
+                }
+                if (Math.abs(newSnake.pos.y - newSnakeBody[0].pos.y) > 51 && newSnake.pos.x == newSnakeBody[0].pos.x) {
+                    newSnake.pos = snakePlan[snakePlan.length-1]
+                    newSnakeBody[0].pos = snakePlan[snakePlan.length-2]
+                    newSnakeBody[0].dir = new Vec((snakePlan[snakePlan.length-1].x - snakePlan[snakePlan.length-2].x)/50, (snakePlan[snakePlan.length-1].y - snakePlan[snakePlan.length-2].y)/50)
+                }  
+                if (Math.abs(newSnake.pos.y - newSnakeBody[0].pos.y) > 51 && (newSnake.pos.x != newSnakeBody[0].pos.x)) {
+                    newSnake.pos = snakePlan[snakePlan.length-1]
+                    newSnakeBody[0].pos = snakePlan[snakePlan.length-2]
+                    newSnakeBody[0].dir = new Vec((snakePlan[snakePlan.length-1].x - snakePlan[snakePlan.length-2].x)/50, (snakePlan[snakePlan.length-1].y - snakePlan[snakePlan.length-2].y)/50)
+                }
+            }
+            if (counterBody > 1) { 
+            
+                for (let i = 1; i <= counterBody-1; i++) {
+                                   
+                    
+                    if ((Math.abs(newSnakeBody[i-1].pos.x - newSnakeBody[i].pos.x) > 55 && Math.abs(newSnakeBody[i-1].pos.x - newSnakeBody[i].pos.x) < 65) || ((Math.abs(newSnakeBody[i-1].pos.y - newSnakeBody[i].pos.y) > 55) && Math.abs(newSnakeBody[i-1].pos.y - newSnakeBody[i].pos.y) < 65)) {
+                        let difMove2 = newSnakeBody[i-1].dir.times(-50)
+                        newSnakeBody[i].pos = newSnakeBody[i-1].pos.plus(difMove2)
+                        newSnakeBody[i].dir = newSnakeBody[i-1].dir
+                    }
+                    for (let u = 2; u < counterBody-1; u++) {
+                        if (Math.abs(newSnake.pos.x - newSnakeBody[u].pos.x) < 40 && Math.abs(newSnake.pos.y - newSnakeBody[u].pos.y) < 40) {
+                        counterBody = 0
+                        snakePlan = []
+                        newSnakeBody = []
+                        snakePlan.push(new Vec(25, 225))
+                        newSnake.pos = new Vec(25, 225)
+                        newSnake.dir = new Vec(0, 0)
+                        refX = [25, 225]
+                        refY = [25, 225]
+                        newObs = []
+                        return new State(this.level, newSnake, newObs, newSnakeBody, "lost")
+                    }
+                }
+                }
+            }
+
+            if (newSnake.pos.x < 25 || newSnake.pos.x > 475) {
+                        counterBody = 0
+                        snakePlan = []
+                        newSnakeBody = []
+                        snakePlan.push(new Vec(25, 225))
+                        newSnake.pos = new Vec(25, 225)
+                        newSnake.dir = new Vec(0, 0)
+                        refX = [25, 225]
+                        refY = [25, 225]
+                        newObs = []
+                return new State(this.level, newSnake, newObs, newSnakeBody, "lost")
+           }
+           if (newSnake.pos.y < 25 || newSnake.pos.y > 475) {
+                        newSnake.gameSpeed = 0
+                        counterBody = 0
+                        snakePlan = []
+                        newSnakeBody = []
+                        snakePlan.push(new Vec(25, 225)) 
+                        newSnake.pos = new Vec(25, 225)
+                        newSnake.dir = new Vec(0, 0)
+                        refX = [25, 225]
+                        refY = [25, 225]
+                        newObs = []
+                return new State(this.level, newSnake, newObs, newSnakeBody, "lost")
+           }
+            return newState
+        } 
+    }
+    
+    class CanvasDisplay {
+        constructor (parent, level) {
+            this.canvas = document.createElement("canvas")
+            this.canvas.width = level.width
+            this.canvas.height = level.height
+            parent.appendChild(this.canvas)
+            this.cx = this.canvas.getContext("2d")
+        }
+        clear() {
+            this.canvas.remove()
+        }
+        drawSnake(snake) {
+            this.cx.fillStyle = "red"
+            this.cx.fillRect(snake.pos.x -snake.size/2, snake.pos.y - snake.size/2, 50, 50)
+            
+        }
+        drawSnakeBody(snakeBody) {
+            
+            if (snakeBody.length > 0) {
+            for (let body of snakeBody) {
+            this.cx.fillStyle = "red"
+            this.cx.fillRect(body.pos.x - body.size/2, body.pos.y - body.size/2, 50, 50)
+            }
+        }
+    }
+
+        drawBackground(level) {
+            this.cx.beginPath()
+            this.cx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+            this.cx.lineWidth = 4
+            this.cx.strokeStyle = "blue"
+            this.cx.strokeRect(0, 0, this.canvas.width, this.canvas.height)
+            this.cx.lineWidth = 0.5
+            for (i = 0; i < 500; i += 50) {
+            this.cx.moveTo(i, 0)    
+            this.cx.lineTo(i, 500)
+            this.cx.moveTo(0, i)    
+            this.cx.lineTo(500, i)
+            }
+            
+            this.cx.stroke()
+        }
+        drawObstacle(obstacles) {
+                 
+            for (let obstacle of obstacles) {
+            this.cx.fillStyle = "green"
+            this.cx.fillRect(obstacle.pos.x - obstacle.size/2, obstacle.pos.y - obstacle.size/2, 50, 50)
+            
+        }
+    }   
+        drawEndingLost(lives) {
+            this.cx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+            this.cx.font = "30px Arial"
+            this.cx.fillText(`Počet zbývajících životů: ${lives-1}`, 70, 250)
+        }
+        drawEndingWon(levelNum) {
+            this.cx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+            this.cx.font = "30px Arial"
+            if (levelNum == 0) {
+            this.cx.fillText(`level 2: "normál"`, 140, 250)
+            }
+            if (levelNum == 1) {
+            this.cx.fillText(`level 3: "hustej"`, 140, 250)
+            }
+            if (levelNum == 2) {
+            this.cx.fillText(`level 3: "bůh"`, 140, 250)
+            }             
+        }
+        syncState(state) {
+            this.drawBackground(state.level)
+            this.drawObstacle(state.obstacles)
+            this.drawSnakeBody(state.snakeBody)
+            this.drawSnake(state.snake)
+        }
+     }
+           
+    function trackKeys(keys) {
+        let down = Object.create(null)
+        function track(event) {
+            if (keys.includes(event.key)) {
+                down[event.key] = event.type == "keydown"
+                event.preventDefault()
+            }
+        }
+        window.addEventListener("keydown", track)
+        window.addEventListener("keyup", track)
+        return down
+    }
+
+    const arrowKeys = trackKeys(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"])  
+    
+    function runAnimation(updateAnimation) {
+    let lastTime = null
+    function frame(time) {
+        if (lastTime != null) {
+            updateAnimation(Math.min(100, time - lastTime) / 1000)
+        }
+        lastTime = time
+        if (requestAnimationFrame(frame) === false) return
+    }
+
+    requestAnimationFrame(frame)
+}
+       
+    function updateAnimation(step) {
+    
+        
+    }
+    function runLevel(level, Display, lives, levelNum) {
+    let display = new Display(document.body, level)
+    let state = State.start(level)
+    let ending = 2
+    return new Promise(resolve => {
+    runAnimation(time => {
+        state = state.update(time, arrowKeys)
+        display.syncState(state)
+                if (state.status == "playing") {
+                return true
+        }
+        else {
+                if (ending > 0) {
+                    ending -= time
+                    if (state.status == "won")
+                    {display.drawEndingWon(levelNum)}
+                    else display.drawEndingLost(lives)
+                    return true
+                }
+                
+                display.clear()
+                resolve(state.status)
+                return false
+            }
+        })
+    })
+}
+
+async function runGame(startPositions, gameDisplay) {
+    let lives = 3
+    for (let levelNum = 0; levelNum < startPositions.length && lives > 0;) {
+        let status = await runLevel(new Level(startPositions[levelNum]), gameDisplay, lives, levelNum)
+        if (status == "won") {
+            levelNum++
+        }
+        else lives--
+        }
+        if (lives > 0) {
+            gameMenu.style.display = "block"
+            textProhra.style.display = "none"
+            nadpisProhra.textContent = "vyhrál jsi!! :-)"
+        }
+        else {
+            gameMenu.style.display = "block"
+            textProhra.style.display = "none"
+            nadpisProhra.textContent = "prohrál jsi :-("
+        }
+    }
+
+</script>   
+    
+</body>
+</html>
